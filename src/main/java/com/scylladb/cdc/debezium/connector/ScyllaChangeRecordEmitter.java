@@ -11,9 +11,7 @@ import io.debezium.pipeline.spi.OffsetContext;
 import io.debezium.util.Clock;
 import org.apache.kafka.connect.data.Struct;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.TimeZone;
+import java.util.*;
 
 public class ScyllaChangeRecordEmitter extends AbstractChangeRecordEmitter<ScyllaCollectionSchema> {
 
@@ -95,21 +93,31 @@ public class ScyllaChangeRecordEmitter extends AbstractChangeRecordEmitter<Scyll
     }
 
     private void fillStructWithChange(ScyllaCollectionSchema schema, Struct keyStruct, Struct valueStruct, RawChange change) {
+        Map<String, ChangeSchema.ColumnDefinition> map = new HashMap<String, ChangeSchema.ColumnDefinition>();
+        for (ChangeSchema.ColumnDefinition i : change.getSchema().getNonCdcColumnDefinitions())
+            map.put(i.getColumnName(), i);
+
+        for (String targetColumn : ScyllaConnectorTask.CUSTOM_KEY_FIELDS) {
+            Object value = translateCellToKafka(change.getCell(targetColumn));
+
+            valueStruct.put(targetColumn, value);
+            keyStruct.put(targetColumn, value);
+        }
+
+        final List<String> listOfKeys = Arrays.asList(ScyllaConnectorTask.CUSTOM_KEY_FIELDS);
+
         for (ChangeSchema.ColumnDefinition cdef : change.getSchema().getNonCdcColumnDefinitions()) {
-            if (!ScyllaSchema.isSupportedColumnSchema(cdef)) continue;
+            if (listOfKeys.contains(cdef.getColumnName())) {
+                continue;
+            }
 
             Object value = translateCellToKafka(change.getCell(cdef.getColumnName()));
 
-            if (cdef.getBaseTableColumnType() == ChangeSchema.ColumnType.PARTITION_KEY || cdef.getBaseTableColumnType() == ChangeSchema.ColumnType.CLUSTERING_KEY) {
-                valueStruct.put(cdef.getColumnName(), value);
-                keyStruct.put(cdef.getColumnName(), value);
-            } else {
-                Boolean isDeleted = this.change.getCell("cdc$deleted_" + cdef.getColumnName()).getBoolean();
-                if (value != null || (isDeleted != null && isDeleted)) {
-                    Struct cell = new Struct(schema.cellSchema(cdef.getColumnName()));
-                    cell.put(ScyllaSchema.CELL_VALUE, value);
-                    valueStruct.put(cdef.getColumnName(), cell);
-                }
+            Boolean isDeleted = this.change.getCell("cdc$deleted_" + cdef.getColumnName()).getBoolean();
+            if (value != null || (isDeleted != null && isDeleted)) {
+                Struct cell = new Struct(schema.cellSchema(cdef.getColumnName()));
+                cell.put(ScyllaSchema.CELL_VALUE, value);
+                valueStruct.put(cdef.getColumnName(), cell);
             }
         }
     }

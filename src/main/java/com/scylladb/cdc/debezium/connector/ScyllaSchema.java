@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ScyllaSchema implements DatabaseSchema<CollectionId> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ScyllaSchema.class);
@@ -86,13 +87,19 @@ public class ScyllaSchema implements DatabaseSchema<CollectionId> {
     private Schema computeKeySchema(ChangeSchema changeSchema, CollectionId collectionId) {
         SchemaBuilder keySchemaBuilder = SchemaBuilder.struct()
                 .name(adjuster.adjust(configuration.getLogicalName() + "." + collectionId.getTableName().keyspace + "." + collectionId.getTableName().name + ".Key"));
-        for (ChangeSchema.ColumnDefinition cdef : changeSchema.getNonCdcColumnDefinitions()) {
-            if (cdef.getBaseTableColumnType() != ChangeSchema.ColumnType.PARTITION_KEY
-                    && cdef.getBaseTableColumnType() != ChangeSchema.ColumnType.CLUSTERING_KEY) continue;
-            if (!isSupportedColumnSchema(cdef)) continue;
 
-            Schema columnSchema = computeColumnSchema(cdef);
-            keySchemaBuilder = keySchemaBuilder.field(cdef.getColumnName(), columnSchema);
+        final Logger logger = LoggerFactory.getLogger(getClass());
+
+        Map<String, ChangeSchema.ColumnDefinition> map = new HashMap<String,ChangeSchema.ColumnDefinition>();
+        for (ChangeSchema.ColumnDefinition i : changeSchema.getNonCdcColumnDefinitions()){
+            logger.error("Has colum with name : " +  i.getColumnName());
+            map.put(i.getColumnName(),i);
+        }
+
+        for (String targetColumn : ScyllaConnectorTask.CUSTOM_KEY_FIELDS) {
+            logger.error("Has requestingColumn : " +  targetColumn);
+
+            keySchemaBuilder = keySchemaBuilder.field(targetColumn, computeColumnSchema(map.get(targetColumn)));
         }
 
         return keySchemaBuilder.build();

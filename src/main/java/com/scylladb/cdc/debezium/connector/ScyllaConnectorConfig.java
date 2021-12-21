@@ -65,6 +65,13 @@ public class ScyllaConnectorConfig extends CommonConnectorConfig {
             .withImportance(ConfigDef.Importance.HIGH)
             .withDescription("The password to connect to Scylla with. If not set, no authorization is done.");
 
+    public static final Field CUSTOM_KEY = Field.create("scylla.custom_key")
+            .withDisplayName("Custom Key (comma separated)")
+            .withType(ConfigDef.Type.STRING)
+            .withWidth(ConfigDef.Width.SHORT)
+            .withImportance(ConfigDef.Importance.HIGH)
+            .withDescription("Custom key (comma separated)");
+
     public static final Field QUERY_TIME_WINDOW_SIZE = Field.create("scylla.query.time.window.size")
             .withDisplayName("Query Time Window Size (ms)")
             .withType(ConfigDef.Type.INT)
@@ -165,6 +172,10 @@ public class ScyllaConnectorConfig extends CommonConnectorConfig {
 
     public String getPassword() {
         return config.getString(ScyllaConnectorConfig.PASSWORD);
+    }
+
+    public String getCustomKey() {
+        return config.getString(ScyllaConnectorConfig.CUSTOM_KEY);
     }
 
     public long getQueryTimeWindowSizeMs() {

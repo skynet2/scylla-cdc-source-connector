@@ -40,6 +40,7 @@ public class ScyllaConnectorTask extends BaseSourceTask {
     }
 
     private static final String CONTEXT_NAME = "scylla-connector-task";
+    public static String[] CUSTOM_KEY_FIELDS;
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private volatile ScyllaSchema schema;
@@ -53,6 +54,12 @@ public class ScyllaConnectorTask extends BaseSourceTask {
 
         final ScyllaConnectorConfig connectorConfig = new ScyllaConnectorConfig(configuration);
         final TopicSelector<CollectionId> topicSelector = ScyllaTopicSelector.defaultSelector(logicalName, connectorConfig.getHeartbeatTopicsPrefix());
+
+        final String customKey = connectorConfig.getCustomKey();
+
+        if(customKey != null && !customKey.isEmpty()){
+            CUSTOM_KEY_FIELDS = Arrays.stream(customKey.split(",")).map(String::trim).toArray(String[]::new);
+        }
 
         final Schema structSchema = connectorConfig.getSourceInfoStructMaker().schema();
         this.schema = new ScyllaSchema(connectorConfig, structSchema);

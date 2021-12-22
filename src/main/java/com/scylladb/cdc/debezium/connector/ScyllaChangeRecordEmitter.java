@@ -113,12 +113,7 @@ public class ScyllaChangeRecordEmitter extends AbstractChangeRecordEmitter<Scyll
 
             Object value = translateCellToKafka(change.getCell(cdef.getColumnName()));
 
-            Boolean isDeleted = this.change.getCell("cdc$deleted_" + cdef.getColumnName()).getBoolean();
-            if (value != null || (isDeleted != null && isDeleted)) {
-                Struct cell = new Struct(schema.cellSchema(cdef.getColumnName()));
-                cell.put(ScyllaSchema.CELL_VALUE, value);
-                valueStruct.put(cdef.getColumnName(), cell);
-            }
+            valueStruct.put(cdef.getColumnName(), value);
         }
     }
 

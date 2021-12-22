@@ -69,19 +69,7 @@ public class ScyllaSchema implements DatabaseSchema<CollectionId> {
     }
 
     private Map<String, Schema> computeCellSchemas(ChangeSchema changeSchema, CollectionId collectionId) {
-        Map<String, Schema> cellSchemas = new HashMap<>();
-        for (ChangeSchema.ColumnDefinition cdef : changeSchema.getNonCdcColumnDefinitions()) {
-            if (cdef.getBaseTableColumnType() == ChangeSchema.ColumnType.PARTITION_KEY
-                    || cdef.getBaseTableColumnType() == ChangeSchema.ColumnType.CLUSTERING_KEY) continue;
-            if (!isSupportedColumnSchema(cdef)) continue;
-
-            Schema columnSchema = computeColumnSchema(cdef);
-            Schema cellSchema = SchemaBuilder.struct()
-                    .name(adjuster.adjust(configuration.getLogicalName() + "." + collectionId.getTableName().keyspace + "." + collectionId.getTableName().name + "." + cdef.getColumnName() + ".Cell"))
-                    .field(CELL_VALUE, columnSchema).optional().build();
-            cellSchemas.put(cdef.getColumnName(), cellSchema);
-        }
-        return cellSchemas;
+        return new HashMap<>();
     }
 
     private Schema computeKeySchema(ChangeSchema changeSchema, CollectionId collectionId) {
@@ -111,12 +99,8 @@ public class ScyllaSchema implements DatabaseSchema<CollectionId> {
         for (ChangeSchema.ColumnDefinition cdef : changeSchema.getNonCdcColumnDefinitions()) {
             if (!isSupportedColumnSchema(cdef)) continue;
 
-            if (cdef.getBaseTableColumnType() != ChangeSchema.ColumnType.PARTITION_KEY && cdef.getBaseTableColumnType() != ChangeSchema.ColumnType.CLUSTERING_KEY) {
-                afterSchemaBuilder = afterSchemaBuilder.field(cdef.getColumnName(), cellSchemas.get(cdef.getColumnName()));
-            } else {
-                Schema columnSchema = computeColumnSchema(cdef);
-                afterSchemaBuilder = afterSchemaBuilder.field(cdef.getColumnName(), columnSchema);
-            }
+            Schema columnSchema = computeColumnSchema(cdef);
+            afterSchemaBuilder = afterSchemaBuilder.field(cdef.getColumnName(), columnSchema);
         }
         return afterSchemaBuilder.optional().build();
     }
@@ -127,12 +111,9 @@ public class ScyllaSchema implements DatabaseSchema<CollectionId> {
         for (ChangeSchema.ColumnDefinition cdef : changeSchema.getNonCdcColumnDefinitions()) {
             if (!isSupportedColumnSchema(cdef)) continue;
 
-            if (cdef.getBaseTableColumnType() != ChangeSchema.ColumnType.PARTITION_KEY && cdef.getBaseTableColumnType() != ChangeSchema.ColumnType.CLUSTERING_KEY) {
-                beforeSchemaBuilder = beforeSchemaBuilder.field(cdef.getColumnName(), cellSchemas.get(cdef.getColumnName()));
-            } else {
-                Schema columnSchema = computeColumnSchema(cdef);
-                beforeSchemaBuilder = beforeSchemaBuilder.field(cdef.getColumnName(), columnSchema);
-            }
+
+            Schema columnSchema = computeColumnSchema(cdef);
+            beforeSchemaBuilder = beforeSchemaBuilder.field(cdef.getColumnName(), columnSchema);
         }
         return beforeSchemaBuilder.optional().build();
     }
